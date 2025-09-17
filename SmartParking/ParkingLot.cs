@@ -2,61 +2,65 @@
 {
     public class ParkingLot
     {
-        public string Name { get; set; }
+        public string ParkingLotName { get; set; }
         public decimal HourlyRate { get; set; }
         public int NumOfSpots { get; }
 
         private List<ParkingSpot> Spots_;
         public IReadOnlyList<ParkingSpot> Spots => Spots_.AsReadOnly();
-        public Dictionary<string,List< ParkingSession>> SessionsHistory { get; set; }
+        public Dictionary<int, List<ParkingSession>> SessionsHistory { get; set; }//TODO - i want to move history in every spot
 
 
         public ParkingLot(string name, decimal hourlyRate, int numOfSpots)
         {
-            Name = name;
+            ParkingLotName = name;
             HourlyRate = hourlyRate;
             NumOfSpots = numOfSpots;
-            Spots_ = new List<ParkingSpot>();
-            SessionsHistory = new Dictionary<string,List<ParkingSession>>();
+            Spots_ = new();
+            SessionsHistory = new();
         }
-        public void AddSpot(ParkingSpot spot)
+        public OperationResult<ParkingSpot> AddSpot(ParkingSpot spot)
         {
             if (Spots_.Count >= NumOfSpots)
-                throw new InvalidOperationException("Parking lot is full. Cannot add more spots.");
+                return OperationResult<ParkingSpot>.Fail("Parking lot is full. Cannot add more spots.");
 
             Spots_.Add(spot);
-            SessionsHistory[spot.SpotId] = new List<ParkingSession>();
+            SessionsHistory[spot.SpotId] = new();
+            return OperationResult<ParkingSpot>.Ok(spot, "Spot added successfully.");
         }
-        public void AssignSpot(Vehicle vehicle)
+
+        public OperationResult<ParkingSpot> AssignSpot(Vehicle vehicle)
         {
-            var freeSpot = Spots.FirstOrDefault(s => s.IsAvailable());
+            var freeSpot = Spots.FirstOrDefault(s => s?.IsAvailable == true);
 
             if (freeSpot == null)
-                throw new InvalidOperationException("No available spots.");
+                return OperationResult<ParkingSpot>.Fail("No available spots."); 
 
             freeSpot.AssignVehicle(vehicle);
+            return OperationResult<ParkingSpot>.Ok(freeSpot, "Vehicle assigned successfully.");
         }
-        public decimal RemoveVehicle(string licensePlate)
+
+        public OperationResult<decimal> RemoveVehicle(string licensePlate)
         {
-            var spot = Spots.FirstOrDefault(s => s.CurrentVehicle?.LicensePlate == licensePlate);
+            var spot = Spots.FirstOrDefault(s => s?.CurrentVehicle?.LicensePlate == licensePlate);
 
             if (spot == null || spot.CurrentVehicle == null || spot.CurrentSession == null)
-                throw new InvalidOperationException("Vehicle not found.");
+                return OperationResult<decimal>.Fail("Vehicle not found.");
 
             var (session, fee) = spot.RemoveVehicle(HourlyRate);
 
             if (session == null)
-                throw new InvalidOperationException("Error ending session.");
+                return OperationResult<decimal>.Fail("Error ending session.");
 
             RecordSession(session, spot.SpotId);
-            return Math.Round(fee,2);
+            return OperationResult<decimal>.Ok(Math.Round(fee, 2), "Vehicle removed successfully.");
         }
-        private void RecordSession(ParkingSession session,string spotId)
+
+        private void RecordSession(ParkingSession session,int spotId)
         {
             if (!SessionsHistory.ContainsKey(spotId))
-            {
-                SessionsHistory[spotId] = new List<ParkingSession>();
-            }
+                SessionsHistory[spotId] = new();
+
             SessionsHistory[spotId].Add(session);
         }
     }
