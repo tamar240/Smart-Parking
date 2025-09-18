@@ -6,52 +6,62 @@ namespace SmartParkingTests
     public sealed class Test
     {
         [TestMethod]
-        public void AddSpot_ShouldIncreaseSpotsCount()
+        public void AddParkingLot_InitializeParkingSpot()
         {
             var lot = new ParkingLot("Lot A", 10m, 3);
-            lot.AddSpot(new ParkingSpot()).GetValueOrThrow();
-            lot.AddSpot(new ParkingSpot()).GetValueOrThrow();
-
-            Assert.AreEqual(2, lot.Spots.Count);
+            Assert.AreEqual(3, lot.Spots.Count);
         }
 
         [TestMethod]
-        public void AssignAndRemoveVehicle_ShouldCalculateFee()
+        public void AssignSpot_WhenLotFull_ShouldReturnFail()
         {
-            var lot = new ParkingLot("Lot A", 10m, 3);
-            var spot = lot.AddSpot(new ParkingSpot()).GetValueOrThrow();
-
-            var car = new Vehicle("123-456", VehicleType.Car);
-            lot.AssignSpot(car).GetValueOrThrow();
-
-            Thread.Sleep(3000);
-
-            var fee = lot.RemoveVehicle("123-456").GetValueOrThrow();
-            Assert.IsTrue(fee > 0);
-
-            Assert.AreEqual(1, lot.SessionsHistory[spot.SpotId].Count);
-        }
-
-        [TestMethod]
-        public void SessionsHistory_ShouldTrackAllSessionsPerSpot()
-        {
-            var lot = new ParkingLot("Lot A", 10m, 3);
-            var spot1 = lot.AddSpot(new ParkingSpot()).GetValueOrThrow();
-            var spot2 = lot.AddSpot(new ParkingSpot()).GetValueOrThrow();
-
+            var lot = new ParkingLot("Lot A", 10m, 1); 
             var car1 = new Vehicle("123-456", VehicleType.Car);
-            var car2 = new Vehicle("789-101", VehicleType.Motorcycle);
+            var car2 = new Vehicle("789-101", VehicleType.Car);
 
-            lot.AssignSpot(car1).GetValueOrThrow();
-            lot.AssignSpot(car2).GetValueOrThrow();
+            lot.AssignSpot(car1);
+            var result = lot.AssignSpot(car2);
 
-            Thread.Sleep(500);
-
-            lot.RemoveVehicle("123-456").GetValueOrThrow();
-            lot.RemoveVehicle("789-101").GetValueOrThrow();
-
-            Assert.AreEqual(1, lot.SessionsHistory[spot1.SpotId].Count);
-            Assert.AreEqual(1, lot.SessionsHistory[spot2.SpotId].Count);
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual("No available spots.", result.Message);
         }
+
+        [TestMethod]
+        public void RemoveVehicle_WhenVehicleNotFound_ShouldReturnFail()
+        {
+            var lot = new ParkingLot("Lot A", 10m, 1);
+            var result = lot.RemoveVehicle("000-000");
+
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual("Vehicle not found.", result.Message);
+        }
+
+        [TestMethod]
+        public void RemoveVehicle_ShouldCalculateFeeCorrectly()
+        {
+            var lot = new ParkingLot("Lot A", 10m, 1);
+            var car = new Vehicle("123-456", VehicleType.Car);
+
+            lot.AssignSpot(car);
+            Thread.Sleep(1000); 
+            var result = lot.RemoveVehicle("123-456");
+
+            Assert.IsTrue(result.Success);
+            Assert.IsTrue(result.Data > 0); 
+        }
+
+        [TestMethod]
+        public void Spot_ShouldHaveHistoryAfterVehicleLeaves()
+        {
+            var lot = new ParkingLot("Lot A", 10m, 1);
+            var car = new Vehicle("123-456", VehicleType.Car);
+
+            var spot = lot.AssignSpot(car);
+            lot.RemoveVehicle("123-456");
+
+            Assert.IsNotNull(spot.Data); 
+            Assert.AreEqual(1, spot.Data.SessionsHistory.Count);
+        }
+
     }
 }

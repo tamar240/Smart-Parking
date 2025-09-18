@@ -1,0 +1,13 @@
+Please answer the following questions:
+1. What is the difference between class and struct in C#?
+2. What is a try-catch-finally block, and when should you use it?
+3. What is the difference between Select, Where, FirstOrDefault, and Any?
+4. Explain the four principles of Object Oriented Programming: Encapsulation, Abstraction, Inheritance and Polymorphism.
+
+Answers:
+1. Class vs Struct A class is a REFERENCE TYPE, while a struct is a VALUE TYPE. Classes can be inherited, while structs cannot. Structs are usually small and store values directly rather than references.
+2. Try-Catch-Finally is a way to properly handle errors: TRY: Attempts to perform an operation that might throw an exception. CATCH: Handles exceptions when they occur; multiple catch blocks can be used for different exception types. FINALLY: A block that always executes, regardless of whether an exception was thrown or not.
+3. SELECT: Chooses an element or a column. WHERE: Filters a collection of elements based on a condition. FirstOrDefault: Returns the first element that satisfies a condition; if none is found, returns the default value of that type. Any: Checks whether at least one element exists that satisfies a condition; returns a boolean.
+4. Encapsulation: Each class is responsible for its variables and methods, handling them internally. Access modifiers (private/public) control visibility from outside the class. Polymorphism: A reference of a parent type can point to an instance of a child type; methods can be overridden to achieve different behaviors. Abstraction: Abstract classes cannot be instantiated directly and may contain abstract methods that must be implemented in derived classes. Inheritance: Enables a class to inherit and extend the behavior of an existing class. Implements the principle “open for extension, closed for modification.”
+
+

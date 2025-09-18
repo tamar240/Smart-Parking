@@ -6,62 +6,66 @@
         public decimal HourlyRate { get; set; }
         public int NumOfSpots { get; }
 
-        private List<ParkingSpot> Spots_;
-        public IReadOnlyList<ParkingSpot> Spots => Spots_.AsReadOnly();
-        public Dictionary<int, List<ParkingSession>> SessionsHistory { get; set; }//TODO - i want to move history in every spot
+        private List<ParkingSpot> spots;
+        private List<ParkingSpot> freeSpots;
+        private Dictionary<string, ParkingSpot> vehicleToSpot;
 
+        public IReadOnlyList<ParkingSpot> Spots => spots.AsReadOnly();
 
         public ParkingLot(string name, decimal hourlyRate, int numOfSpots)
         {
+            if (hourlyRate <= 0)
+                throw new ArgumentException("Hourly rate must be greater than zero.", nameof(hourlyRate));
+
+            if (numOfSpots <= 0)
+                throw new ArgumentException("Number of spots must be greater than zero.", nameof(numOfSpots));
+
             ParkingLotName = name;
             HourlyRate = hourlyRate;
             NumOfSpots = numOfSpots;
-            Spots_ = new();
-            SessionsHistory = new();
-        }
-        public OperationResult<ParkingSpot> AddSpot(ParkingSpot spot)
-        {
-            if (Spots_.Count >= NumOfSpots)
-                return OperationResult<ParkingSpot>.Fail("Parking lot is full. Cannot add more spots.");
 
-            Spots_.Add(spot);
-            SessionsHistory[spot.SpotId] = new();
-            return OperationResult<ParkingSpot>.Ok(spot, "Spot added successfully.");
+            spots = new List<ParkingSpot>();
+            freeSpots = new List<ParkingSpot>();
+            vehicleToSpot = new Dictionary<string, ParkingSpot>();
+
+            InitializeParkingSpots();
+        }
+
+        private void InitializeParkingSpots()
+        {
+            for (int i = 0; i < NumOfSpots; i++)
+            {
+                var spot = new ParkingSpot();
+                spots.Add(spot);
+                freeSpots.Add(spot);
+            }
         }
 
         public OperationResult<ParkingSpot> AssignSpot(Vehicle vehicle)
         {
-            var freeSpot = Spots.FirstOrDefault(s => s?.IsAvailable == true);
+            if (freeSpots.Count == 0)
+                return OperationResult<ParkingSpot>.Fail("No available spots.");
 
-            if (freeSpot == null)
-                return OperationResult<ParkingSpot>.Fail("No available spots."); 
+            var spot = freeSpots[0]; 
+            freeSpots.RemoveAt(0);
 
-            freeSpot.AssignVehicle(vehicle);
-            return OperationResult<ParkingSpot>.Ok(freeSpot, "Vehicle assigned successfully.");
+            spot.AssignVehicle(vehicle);
+            vehicleToSpot[vehicle.LicensePlate] = spot;
+
+            return OperationResult<ParkingSpot>.Ok(spot, "Vehicle assigned successfully.");
         }
 
         public OperationResult<decimal> RemoveVehicle(string licensePlate)
         {
-            var spot = Spots.FirstOrDefault(s => s?.CurrentVehicle?.LicensePlate == licensePlate);
+            if (!vehicleToSpot.TryGetValue(licensePlate, out var spot) || spot.CurrentVehicle == null || spot.CurrentSession == null)
+                 return OperationResult<decimal>.Fail("Vehicle not found.");
 
-            if (spot == null || spot.CurrentVehicle == null || spot.CurrentSession == null)
-                return OperationResult<decimal>.Fail("Vehicle not found.");
+            var fee = spot.RemoveVehicle(HourlyRate);
 
-            var (session, fee) = spot.RemoveVehicle(HourlyRate);
+            freeSpots.Add(spot);
+            vehicleToSpot.Remove(licensePlate);
 
-            if (session == null)
-                return OperationResult<decimal>.Fail("Error ending session.");
-
-            RecordSession(session, spot.SpotId);
             return OperationResult<decimal>.Ok(Math.Round(fee, 2), "Vehicle removed successfully.");
-        }
-
-        private void RecordSession(ParkingSession session,int spotId)
-        {
-            if (!SessionsHistory.ContainsKey(spotId))
-                SessionsHistory[spotId] = new();
-
-            SessionsHistory[spotId].Add(session);
         }
     }
 }

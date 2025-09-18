@@ -9,10 +9,12 @@ namespace SmartParking
         public Vehicle? CurrentVehicle { get; set; }
         public ParkingSession? CurrentSession { get; set; }
         public bool IsAvailable => CurrentVehicle == null;
+        public List<ParkingSession> SessionsHistory { get;} 
 
         public ParkingSpot()
         {
             SpotId = ++Counter;
+            SessionsHistory = new List<ParkingSession>();
         }
       
         public void AssignVehicle(Vehicle vehicle)
@@ -20,7 +22,8 @@ namespace SmartParking
             CurrentVehicle = vehicle;
             CurrentSession = new (vehicle);
         }
-        public (ParkingSession?,decimal) RemoveVehicle(decimal hourlyRate)
+
+        public decimal RemoveVehicle(decimal hourlyRate)
         {
             var session = CurrentSession;
 
@@ -28,8 +31,9 @@ namespace SmartParking
             CurrentSession = null;
 
             var fee = session?.EndSession(hourlyRate) ?? 0;
+            SessionsHistory.Add(session!);
 
-            return (session,fee);
+            return fee;
         }
     }
 }

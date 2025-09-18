@@ -22,7 +22,7 @@
             return CalculateFee(hourlyRate);
         }
 
-        private decimal CalculateFee(decimal hourlyRate)
+        private decimal CalculateFee(decimal hourlyRate,int roundMinutes=15)
         {
             if (ExitTime == null)
                 throw new InvalidOperationException("Session is still active.");
@@ -30,8 +30,12 @@
             var duration = ExitTime.Value - EntryTime;
             var totalMinutes = duration.TotalMinutes;
 
-            Fee = (decimal)totalMinutes * (hourlyRate / 60);
+            var minutesToCharge = Math.Ceiling(totalMinutes / roundMinutes) * roundMinutes;
+
+
+            Fee = (decimal)minutesToCharge * (hourlyRate / 60);
             return Fee;
         }
+     
     }
 }
